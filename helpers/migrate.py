@@ -108,7 +108,7 @@ class ModuleMigration:
         for (old, new, migration) in for_each_migrations:
             # Do the initial migration of the whole collection
             # only once if it hasn't been done yet
-            key = old.resource_type + "." + old.name
+            key = f"{old.resource_type}.{old.name}"
             if key not in for_each_initial_migration:
                 for_each_initial_migration[key] = True
                 old.plural = False
@@ -227,10 +227,9 @@ class TerraformResource:
         self.key = None
         self.plural = True
 
-        find_suffix = re.match(r'(^.+)\[(\d+)\]', name)
-        if find_suffix:
-            self.name = find_suffix.group(1)
-            self.index = find_suffix.group(2)
+        if find_suffix := re.match(r'(^.+)\[(\d+)\]', name):
+            self.name = find_suffix[1]
+            self.index = find_suffix[2]
         else:
             self.name = name
             self.index = -1
@@ -286,9 +285,7 @@ class TerraformState:
                                r["name"] == resource.name]
 
         if (len(state_resource_list) != 1):
-            raise ValueError(
-                "Could not find resource list in state for {}"
-                .format(resource))
+            raise ValueError(f"Could not find resource list in state for {resource}")
 
         index = int(resource.index)
         # If this a collection use the index to find the right resource,
@@ -299,8 +296,9 @@ class TerraformState:
 
             if (len(state_resource) != 1):
                 raise ValueError(
-                    "Could not find resource in state for {} key {}"
-                    .format(resource, resource.index))
+                    f"Could not find resource in state for {resource} key {resource.index}"
+                )
+
         else:
             state_resource = state_resource_list[0]["instances"]
 
@@ -348,8 +346,8 @@ def state_changes_for_module(module, state):
 
     migration = ModuleMigration(module, state)
 
+    wrapper = "'{0}'"
     for (old, new) in migration.moves():
-        wrapper = "'{0}'"
         argv = ["terraform",
                 "state",
                 "mv",
@@ -386,7 +384,7 @@ def migrate(state=None, dryrun=False):
 
     print("---- Migrating the following modules:")
     for module in modules_to_migrate:
-        print("-- " + module.name)
+        print(f"-- {module.name}")
 
     # Collect a list of resources for each module
     commands = []
